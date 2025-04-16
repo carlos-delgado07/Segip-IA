@@ -1,0 +1,17 @@
+{
+    "usuarios": [
+      {
+        "id": 1,
+        "nombre": "Juan Carlos",
+        "apellido": "Delgado Delgadillo",
+        "email": "juan@gmail.com"
+      },
+      {
+        "id": 2,
+        "nombre": "Jose Humberto",
+        "apellido": "Castro Ortiz",
+        "email": "jose@gmail.com"
+      }
+    ]
+  }
+  
