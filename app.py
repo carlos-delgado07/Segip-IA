@@ -8,15 +8,17 @@ import base64
 from datetime import datetime
 
 app = Flask(__name__)
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
 
 # Cargar usuarios
 def cargar_usuarios():
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'usuarios.json')
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "usuarios.json")
     if not os.path.exists(path):
         return {}
-    with open(path, 'r') as f:
+    with open(path, "r") as f:
         return json.load(f)
+
 
 # Extraer texto usando pytesseract desde imagen base64
 def extraer_texto_base64(imagen_base64):
@@ -29,63 +31,86 @@ def extraer_texto_base64(imagen_base64):
     except Exception as e:
         return "", None
 
-@app.route('/verificar', methods=['POST'])
+
+@app.route("/verificar", methods=["POST"])
 def comparar_dos_imagenes():
     data = request.get_json()
 
     # Verificar que estén ambas imágenes
-    if 'imagen1' not in data or 'imagen2' not in data:
-        return jsonify({'error': 'Faltan una o ambas imágenes'}), 400
+    if "imagen1" not in data or "imagen2" not in data:
+        return jsonify({"error": "Faltan una o ambas imágenes"}), 400
 
     try:
         # Extraer texto de ambas imágenes
-        texto1, img1 = extraer_texto_base64(data['imagen1'])
-        texto2, img2 = extraer_texto_base64(data['imagen2'])
+        texto1, img1 = extraer_texto_base64(data["imagen1"])
+        texto2, img2 = extraer_texto_base64(data["imagen2"])
 
         if not texto1 or not texto2:
-            return jsonify({'error': 'No se pudo extraer texto de una o ambas imágenes'}), 400
+            return (
+                jsonify({"error": "No se pudo extraer texto de una o ambas imágenes"}),
+                400,
+            )
 
         # Limpiar y formatear los textos extraídos
         texto1 = texto1.strip().lower()
         texto2 = texto2.strip().lower()
 
-        # Verificar si ambos textos contienen el mismo nombre y apellido
-        if texto1 == texto2:
-            usuarios = cargar_usuarios()
-            usuario_encontrado = None
+        usuarios = cargar_usuarios()
+        usuario_encontrado = None
 
-            for usuario in usuarios.get("usuarios", []):
-                if usuario["nombre"].lower() in texto1 and usuario["apellido"].lower() in texto1:
-                    usuario_encontrado = usuario
-                    break
+        for usuario in usuarios.get("usuarios", []):
+            nombre = usuario["nombre"].lower()
+            apellido = usuario["apellido"].lower()
 
-            if usuario_encontrado:
-                # Crear carpeta de destino por fecha
-                fecha_actual = datetime.now().strftime("%Y-%m-%d")
-                carpeta_destino = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'verificados', fecha_actual)
-                os.makedirs(carpeta_destino, exist_ok=True)
+            if (
+                nombre in texto1
+                and apellido in texto1
+                and nombre in texto2
+                and apellido in texto2
+            ):
+                usuario_encontrado = usuario
+                break
 
-                # Guardar ambas imágenes con nombre diferenciado
-                timestamp = datetime.now().strftime('%H%M%S')
-                nombre_base = f"{usuario_encontrado['nombre']}_{usuario_encontrado['apellido']}_{timestamp}"
-                ruta_imagen1 = os.path.join(carpeta_destino, f"{nombre_base}_1.jpg")
-                ruta_imagen2 = os.path.join(carpeta_destino, f"{nombre_base}_2.jpg")
+        if usuario_encontrado:
+            # Crear carpeta de destino por fecha
+            fecha_actual = datetime.now().strftime("%Y-%m-%d")
+            carpeta_destino = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), "verificados", fecha_actual
+            )
+            os.makedirs(carpeta_destino, exist_ok=True)
 
-                cv2.imwrite(ruta_imagen1, img1)
-                cv2.imwrite(ruta_imagen2, img2)
+            # Guardar ambas imágenes con nombre diferenciado
+            timestamp = datetime.now().strftime("%H%M%S")
+            nombre_base = f"{usuario_encontrado['nombre']}_{usuario_encontrado['apellido']}_{timestamp}"
+            ruta_imagen1 = os.path.join(carpeta_destino, f"{nombre_base}_1.jpg")
+            ruta_imagen2 = os.path.join(carpeta_destino, f"{nombre_base}_2.jpg")
 
-                return jsonify({
-                    'mensaje': 'Usuario encontrado en la base de datos',
-                    'usuario': usuario_encontrado
-                })
+            cv2.imwrite(ruta_imagen1, img1)
+            cv2.imwrite(ruta_imagen2, img2)
 
-            else:
-                return jsonify({'mensaje': 'El usuario no se encuentra en la base de datos'}), 404
+            return jsonify(
+                {
+                    "mensaje": "Usuario encontrado en la base de datos",
+                    "usuario": usuario_encontrado,
+                }
+            )
+
         else:
-            return jsonify({'error': 'Los nombres y apellidos de ambas imágenes no coinciden'}), 400
+            return (
+                jsonify(
+                    {
+                        "mensaje": "El usuario no se encuentra en la base de datos o los nombres no coinciden en ambas imágenes"
+                    }
+                ),
+                404,
+            )
 
     except Exception as e:
-        return jsonify({'error': f'Ocurrió un error al procesar las imágenes: {str(e)}'}), 500
+        return (
+            jsonify({"error": f"Ocurrió un error al procesar las imágenes: {str(e)}"}),
+            500,
+        )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app.run(port=5000, debug=True)
