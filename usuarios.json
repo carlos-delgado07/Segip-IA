@@ -14,8 +14,8 @@
     },
     {
       "id": 2,
-      "nombres": "Jose Humberto",
-      "apellidos": "Castro Ortiz",
+      "nombre": "Jose Humberto",
+      "apellido": "Castro Ortiz",
       "email": "jose@gmail.com",
       "fecha_nacimiento": "1990-06-22",
       "nro_carnet": "987654321",
